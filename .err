@@ -1,0 +1,4 @@
+service/terminal.cpp: In function 'int outputHello()':
+service/terminal.cpp:6:1: warning: no return statement in function returning non-void [-Wreturn-type]
+ }
+ ^
