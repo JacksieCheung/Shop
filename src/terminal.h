@@ -1,6 +1,4 @@
-#ifndef TERMINAL_H_
-#define TERMINAL_H_
 #define Status int
 
+// func
 Status outputHello();
-#endif
