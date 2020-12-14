@@ -22,7 +22,7 @@
 
 ```c
 // 通过名字检索
-Delete '大米' 5;
+Del '大米' 5;
 ```
 
 2.从链表扣除,这个打算做成定时任务
@@ -31,8 +31,49 @@ Delete '大米' 5;
 
 1.查找商品是否在仓库，后返回
 
+```c
+>Select '大米';
+```
+
 2.排序功能
+
+```c
+>Search all desc;
+
+// ...
+
+>Search all asc;
+```
+
+3.列出商品
+
+```c
+>Search all;
+```
 
 **数据库保存**
 
-1.提供 save 功能
+1.提供 save 功能，也有定时任务。
+
+```c
+>Save;
+```
+
+**指令系统**
+
+```c
+// 增/删/查/改
+add 'case' nums,'case' nums;
+new 'case' nums,'case' nums;
+del 'case' nums,'case' nums;
+select 'case','case' [desc/asc];
+search all [desc/asc];
+
+// 内存-文件交换
+save;    // 更新到文件中，有定时任务
+read;    // 文件读取刷新内存数据库
+
+// 用户
+sudo; // 获得管理员权限
+exit;  // 退出管理员模式/退出程序
+```

@@ -16,6 +16,15 @@ typedef struct listHead{
 	listNode* Next; // 指向孩子
 }listHead;
 
+// 顶层数组头节点，用于排序
+typedef struct array{
+	int Length;     // 逻辑长度
+	int Containt;   // 物理长度
+	listNode** Arr; // 数组
+}Array;
+
+Array* TOPARR = NULL;
+
 // 数据库变量
 listHead* DB=NULL;
 
@@ -27,8 +36,16 @@ typedef struct altRequest{
 }altRequest;
 
 // --func--
-// 初始化链表，malloc
 Status InitDB();
-
-// 插入表
-Status InsertDB(int index,listNode* node);
+Status InitTOPARR();
+void SortArr();
+Status InsertArr();
+listNode* SearchDBBefore();
+listNode* SearchDBByName();
+Status AddData();
+Status AddDataNotExist();
+Status DelData();
+Status DelDataFromList();
+void ListData();
+void ListDataDesc();
+void ListDataAsc();
