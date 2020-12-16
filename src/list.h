@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<time.h>
 #include "errno.h"
 
 // --structure--
@@ -23,10 +24,19 @@ typedef struct array{
 	listNode** Arr; // 数组
 }Array;
 
-Array* TOPARR = NULL;
+// 删除缓冲池节点
+typedef struct delNode{
+	char* Name;      // 名字
+	time_t DeleteAt; // 删除时间(1970到现在的秒数)
+	time_t RemoveAt; // 移除时间，用于刷新不为0时
+	struct delNode* Next;
+}delNode;
 
-// 数据库变量
-listHead* DB=NULL;
+// 删除缓冲池 (头结构)
+typedef struct delpool{
+	delNode* Pool; // 字符串数组
+	int Sum;       // 总数
+}delpool;
 
 // --request--
 // 进货请求
@@ -38,6 +48,7 @@ typedef struct altRequest{
 // --func--
 Status InitDB();
 Status InitTOPARR();
+Status InitDelPool();
 void SortArr();
 Status InsertArr();
 listNode* SearchDBBefore();
@@ -49,3 +60,13 @@ Status DelDataFromList();
 void ListData();
 void ListDataDesc();
 void ListDataAsc();
+Status SetDeleteTIme(const char* Name);
+Status SetRemoveTime(const char* Name);
+
+// --CommandAction--
+Status SearchAction(int order);
+Status SelectAction(int order,char** goods,int index);
+Status AddAction(int order,char** goods,int index,int* sum);
+Status NewAction(int order,char** goods,int index,int* sum);
+Status DelAction(char** goods,int index,int* sum);
+Status CheckPool();
