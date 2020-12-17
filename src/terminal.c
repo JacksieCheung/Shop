@@ -9,3 +9,14 @@ Status outputHello() {
 	printf(">");
 	return OK;
 }
+
+Status outputMenu(){
+#include "ascii_menu.h"
+	printf("%s",ascii_menu);
+	return OK;
+}
+
+Status outputGoodbye(){
+	printf("System:data has been saved, see you next time^_^\n");
+	return OK;
+}

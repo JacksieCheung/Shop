@@ -1,5 +1,17 @@
 # Shop
 
+**特点：**
+
+1. 实现简易删除缓冲池，软删除
+
+2. 数据库顶层数组，底层链表
+
+3. sudo 管理员模式
+
+4. 指令系统
+
+5. 定时任务
+
 >其实也不是很大工程，就分为三个部分:增删商品/查商品/数据库保存/指令系统
 
 * 整个程序的入口以一个 for 循环阻塞接受命令。
@@ -38,17 +50,17 @@ Del '大米' 5;
 2.排序功能
 
 ```c
->Search all desc;
+>Search desc;
 
 // ...
 
->Search all asc;
+>Search asc;
 ```
 
 3.列出商品
 
 ```c
->Search all;
+>Search;
 ```
 
 **数据库保存**
@@ -67,7 +79,7 @@ add 'case' nums,'case' nums;
 new 'case' nums,'case' nums;
 del 'case' nums,'case' nums;
 select 'case','case' [desc/asc];
-search all [desc/asc];
+search [desc/asc];
 
 // 内存-文件交换
 save;    // 更新到文件中，有定时任务
@@ -75,5 +87,10 @@ read;    // 文件读取刷新内存数据库
 
 // 用户
 sudo; // 获得管理员权限
-exit;  // 退出管理员模式/退出程序
+exit; // 退出管理员模式/退出程序
+menu; // 看菜单
 ```
+
+**bugs**
+
+set errno

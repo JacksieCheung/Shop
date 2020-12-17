@@ -1,9 +1,15 @@
 #include "terminal.h"
 #include "command.h"
+#include "file.h"
 #include "list.h"
+#include "sudo.h"
+#include "errno.h"
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
+#define TIME_LOOP 1800 // 30分钟
+
+extern int Sudo;
 
 int main(){
 	// 启动界面
@@ -24,37 +30,82 @@ int main(){
 	}
 	int* sum = (int*)malloc(sizeof(int)*50);
 	int index = 0;
-	int order = -1;
-	int resp = 0;
+	int order = 0;
+	Status resp = 0;
+	Status stat = 0;
+	time_t Pivot = time(NULL)+TIME_LOOP;
+	time_t Now = 0;
 
 	while(1){
 		fgets(line,100,stdin);
 		if (strlen(line)>100) continue;
 		line[strlen(line)-1] = '\0';// 末尾有个 '\n'
-		switch (ResolveCommand(line,goods,sum,&index,&order)){ // 解析命令
-			case 0: break;
-			case 1: break;
-			case 2: break;
-			case 3: break;
-			case 4: break;
-			case 5: resp = AddAction(order,goods,index,sum); break;
-			case 6: resp = NewAction(order,goods,index,sum); break;
-			case 7: resp = DelAction(goods,index,sum); break;
-			case 8: resp = SelectAction(order,goods,index); break;
-			case 9: resp = SearchAction(order); break;
-			case 10: resp = SearchAction(order); break;
+		stat = ResolveCommand(line,goods,sum,&index,&order);	
+		switch (stat){ // 解析命令
+			case SAVE: 
+				if(Sudo){
+					resp = Save(); 
+				} else {
+					resp = ERR_SUDO;
+				}
+				break;
+			case READ: resp = Read(); break;
+			case SUDO: resp = SetSudo(); break;
+			case EXIT: resp = IfExist(); break;
+			case MENU: resp = outputMenu(); break;
+			case ADD: 
+				if(Sudo){
+					resp = AddAction(order,goods,index,sum);
+				} else {
+					resp = ERR_SUDO;
+				}
+				break;
+			case NEW: 
+				if (Sudo){
+					resp = NewAction(order,goods,index,sum); 
+				} else {
+					resp = ERR_SUDO;
+				}
+				break;
+			case DEL: 
+				if(Sudo){
+					resp = DelAction(goods,index,sum); 
+				} else {
+					resp = ERR_SUDO;
+				}
+				break;
+			case SELECT: resp = SelectAction(order,goods,index); break;
+			case SEARCH: resp = SearchAction(order); break;
 			default: 
-				printf("error\n");
+				resp = stat;
 				break;
 		}
 
 		// 结果处理
-		printf("resp:%d\n",resp);
-		CheckPool();
-		printf(">");
+		if (resp==EXIT_NOW) break;
+		if (resp!=OK) {
+			HandleStatus(resp);
+		} else {
+			printf("System:OK.\n");
+		}
+
+		// checkpool 伪定时任务
+		Now = time(NULL);
+		if (Now>Pivot){
+			CheckPool();
+			Pivot = Now+TIME_LOOP;
+		}
+		
+		// next command
+		if (Sudo) {
+			printf("=>");
+		} else {
+			printf(">");
+		}
 	}
 
 	// save
+	Save();
 
 	// free
 	free(sum);
@@ -62,5 +113,17 @@ int main(){
 		free(goods[i]);
 	}
 	free(goods);
+	
+	// free DB
+	DestroyDB();
+
+	// free TOPARR
+	DestroyTOPARR();
+
+	// free DelPool
+	DestroyDelPool();
+
+	outputGoodbye();
+
 	return 0;	
 }

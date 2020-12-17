@@ -3,7 +3,7 @@
 #include<string.h>
 #define INIT_SIZE 10
 #define QUEUE_SIZE 10
-#define TIME_INIT 10 // 30分钟
+#define TIME_INIT 1800 // 30分钟
 
 // 顶层数组
 Array* TOPARR = NULL;
@@ -17,19 +17,67 @@ delpool* DelPool = NULL;
 // 初始化 DB
 Status InitDB(){
 	DB = (listHead*)malloc(sizeof(listHead));
-	if (DB==NULL) return Error;
+	if (DB==NULL) return ERR_MALLOC;
+	return OK;
+}
+
+// 销毁 DB
+Status DestroyDB(){
+	listNode* tmp = DB->Next;
+	if(tmp==NULL){
+		free(DB);
+		return OK;
+	}
+	while(tmp->Next!=NULL){
+		DB->Next = tmp->Next;
+		free(tmp->Name);
+		free(tmp);
+		tmp = DB->Next;
+	}
+
+	free(DB->Next);
+	free(DB);
+	return OK;
+}
+
+// 重置 DB
+Status ResetDB(){
+	listNode* tmp = DB->Next;
+	if (tmp==NULL) return OK;
+	while(tmp->Next!=NULL){
+		DB->Next = tmp->Next;
+		free(tmp->Name);
+		free(tmp);
+		tmp = DB->Next;
+	}
+
+	free(DB->Next);
+	DB->Next = NULL;
 	return OK;
 }
 
 // 初始化 Array
 Status InitTOPARR(){
 	TOPARR = (Array*)malloc(sizeof(Array));
-	if (TOPARR==NULL) return Error;
+	if (TOPARR==NULL) return ERR_MALLOC;
 
 	TOPARR->Arr = (listNode**)malloc(sizeof(listNode*)*INIT_SIZE);
-	if (TOPARR->Arr==NULL) return Error;
+	if (TOPARR->Arr==NULL) return ERR_MALLOC;
 
 	TOPARR->Containt = INIT_SIZE;
+	TOPARR->Length = 0;
+	return OK;
+}
+
+// 销毁 Array
+Status DestroyTOPARR(){
+	free(TOPARR->Arr);
+	free(TOPARR);
+	return OK;
+}
+
+// 重置 TOPARR
+Status ResetTOPARR(){
 	TOPARR->Length = 0;
 	return OK;
 }
@@ -37,14 +85,49 @@ Status InitTOPARR(){
 // 初始化删除队列
 Status InitDelPool(){
 	DelPool = (delpool*)malloc(sizeof(delpool));
-	if (DelPool==NULL) return Error;
+	if (DelPool==NULL) return ERR_MALLOC;
 	return OK;
+}
+
+// 销毁 DelPool
+Status DestroyDelPool(){
+	delNode* tmp = DelPool->Pool;
+	if (tmp==NULL){
+		free(DelPool);
+		return OK;
+	}
+	while(tmp->Next!=NULL){
+		DelPool->Pool = tmp->Next;
+		free(tmp->Name);
+		free(tmp);
+		tmp = DelPool->Pool;
+	}
+
+	free(DelPool->Pool);
+	free(DelPool);
+	return OK; 
+}
+
+// 重置 DelPool
+Status ResetDelPool(){
+	delNode* tmp = DelPool->Pool;
+	if (tmp==NULL) return OK;
+	while(tmp->Next!=NULL){
+		DelPool->Pool = tmp->Next;
+		free(tmp->Name);
+		free(tmp);
+		tmp = DelPool->Pool;
+	}
+
+	free(DelPool->Pool);
+	DelPool->Pool = NULL;
+	return OK; 
 }
 
 // 查找池子,删除过期的节点
 Status CheckPool(){
 	delNode* tmp = DelPool->Pool;
-	if (tmp==NULL) return -1;
+	if (tmp==NULL) return OK;
 	
 	time_t now = time(NULL);
 
@@ -58,45 +141,47 @@ Status CheckPool(){
 	while(tmp!=NULL){
 		printf("time:%ld\n",time(NULL));
 		if (now>tmp->DeleteAt&&tmp->DeleteAt>0){
-			DelDataFromList(SearchDBBefore(tmp->Name));
+			DelDataFromList(SearchDBByName(tmp->Name));
 			DelPool->Pool = tmp->Next;
 			// free tmp
 			free(tmp->Name);
 			free(tmp);
 			tmp = DelPool->Pool;
+			DelPool->Sum = DelPool->Sum-1;
 		} else if(now>tmp->RemoveAt&&tmp->RemoveAt>0){
-			DelDataFromList(SearchDBBefore(tmp->Name));
 			DelPool->Pool = tmp->Next;
 			// free tmp
 			free(tmp->Name);
 			free(tmp);
 			tmp = DelPool->Pool;
+			DelPool->Sum = DelPool->Sum-1;
 		} else {
 			break;
 		}
 	}
 
-	if (tmp==NULL) return 0;
+	if (tmp==NULL) return OK;
 
 	// 如果当前时间超过两个节点，同时删除 Pool 和 DB
 	while(tmp->Next!=NULL){
 		if(now>tmp->Next->DeleteAt&&tmp->Next->DeleteAt>0){
-			DelDataFromList(SearchDBBefore(tmp->Next->Name));
+			DelDataFromList(SearchDBByName(tmp->Next->Name));
 			delNode* node = tmp->Next;
 			tmp->Next = node->Next;
 			free(node->Name);
 			free(node);
+			DelPool->Sum = DelPool->Sum-1;
 		} else if (now>tmp->Next->RemoveAt&&tmp->Next->RemoveAt>0){
-			DelDataFromList(SearchDBBefore(tmp->Next->Name));
 			delNode* node = tmp->Next;
 			tmp->Next = node->Next;
 			free(node->Name);
 			free(node);
+			DelPool->Sum = DelPool->Sum-1;
 		}
 		tmp = tmp->Next;
 	}
 
-	return 0;
+	return OK;
 }
 
 // 设置删除时间
@@ -109,7 +194,7 @@ Status SetDeleteTime(const char* Name){
 			// exist
 			tmp->DeleteAt = time(NULL)+TIME_INIT;
 			tmp->RemoveAt = 0;
-			return 1;
+			return OK;
 		}
 		tmp = tmp->Next;
 	}
@@ -121,23 +206,23 @@ Status SetDeleteTime(const char* Name){
 	node->DeleteAt = time(NULL)+TIME_INIT;
 	node->Next = DelPool->Pool;
 	DelPool->Pool = node;
-	return 1;
+	return OK;
 }
 
 Status SetRemoveTime(const char* Name){
 	delNode* tmp = DelPool->Pool;
-	if (tmp==NULL) return 0; // empty
+	if (tmp==NULL) return OK; // empty
 	
 	while(tmp!=NULL) {
 		if (strlen(tmp->Name)==strlen(Name)
 		&&!strcmp(tmp->Name,Name)){
 			tmp->DeleteAt = 0;
 			tmp->RemoveAt = time(NULL)+TIME_INIT;
-			return 1;
+			return OK;
 		}
 	}
 	
-	return -1; // not found
+	return ERR_NODENOTFOUNDPOOL; // not found
 }
 
 // 插入排序
@@ -168,14 +253,37 @@ Status InsertArr(listNode* node){
 	return OK;
 }
 
+// 删除元素
+Status DelArr(listNode* node){
+	int len = TOPARR->Length;
+	int index = 0;
+	for (int i=0;i<len;i++){
+		if (strlen(node->Name)==strlen(TOPARR->Arr[i]->Name)
+		&&!strcmp(node->Name,TOPARR->Arr[i]->Name)){
+			index = i;
+			break;
+		}
+	}
+
+	while(index<len-1){
+		TOPARR->Arr[index]=TOPARR->Arr[index+1];
+		index++;
+	}
+
+	TOPARR->Length = TOPARR->Length - 1;
+	printf("%d|%d\n",TOPARR->Containt,TOPARR->Length);
+	return OK;
+}
+
 // 查找数据库，返回前一个节点指针。
-listNode* SearchDBBefore(const char* Name){
+listNode* SearchDBBefore(const char* Name,int* ifFirst){
 	listNode* tmp = DB->Next;
 	if (tmp==NULL) return NULL;
 
 	// 检查自身
 	if (strlen(tmp->Name)==strlen(Name)
 	&&!strcmp(tmp->Name,Name)){
+		*ifFirst = 1;
 		return tmp;
 	}
 
@@ -208,11 +316,11 @@ listNode* SearchDBByName(const char* Name){
 
 // 商店进货，先查找商品，再插入
 Status AddData(altRequest* ptr){
-	if (ptr==NULL) return Error;
+	if (ptr==NULL) return ERR_EMPTYGOODS;
 
 	// printf("%s\n",ptr->Name);
 	listNode* tmp = SearchDBByName(ptr->Name);
-	if (tmp==NULL) return Error; // record not found
+	if (tmp==NULL) return ERR_NODENOTFOUNDDB; // record not found
 
 	// if sum==0, set remove time
 	if (tmp->Sum==0) SetRemoveTime(tmp->Name);
@@ -225,13 +333,13 @@ Status AddData(altRequest* ptr){
 
 // 新增商品，先查找，再插入
 Status AddDataNotExist(altRequest* ptr){
-	if (ptr==NULL) return Error;
+	if (ptr==NULL) return ERR_EMPTYGOODS;
 
 	listNode* tmp = SearchDBByName(ptr->Name);
-	if (tmp!=NULL) return Error; // record is existed
+	if (tmp!=NULL) return ERR_NODEEXISTEDDB; // record is existed
 
 	tmp = (listNode*)malloc(sizeof(listNode));
-	if (tmp==NULL) return Error;
+	if (tmp==NULL) return ERR_MALLOC;
 
 	tmp->Name = (char*)malloc(sizeof(strlen(ptr->Name)));
 	strcpy(tmp->Name,ptr->Name);
@@ -247,12 +355,12 @@ Status AddDataNotExist(altRequest* ptr){
 
 // 商品--,先查找，再改。修改队列
 Status DelData(altRequest* ptr){
-	if (ptr==NULL) return Error;
+	if (ptr==NULL) return ERR_EMPTYGOODS;
 
 	listNode* tmp = SearchDBByName(ptr->Name);
-	if (tmp==NULL) return Error; // record not found
+	if (tmp==NULL) return ERR_NODENOTFOUNDDB; // record not found
 
-	if (tmp->Sum<ptr->Sum) return Error; // sum overflow
+	if (tmp->Sum<ptr->Sum) return ERR_SUMOVERFLOW; // sum overflow
 
 	tmp->Sum = tmp->Sum - ptr->Sum;
 
@@ -266,14 +374,26 @@ Status DelData(altRequest* ptr){
 
 // 从链表删除，此为定时任务
 Status DelDataFromList(listNode* node){
-	if (node==NULL) return Error;
-	
-	listNode* tmp = SearchDBBefore(node->Name);
-	if (tmp==NULL) return Error; // record not found
-	
-	tmp->Next = node->Next;
-	free(node->Name);
-	free(node);
+	if (node==NULL) return ERR_EMPTYGOODS;
+
+	int ifFirst = 0;
+
+	listNode* tmp = SearchDBBefore(node->Name,&ifFirst);
+
+	// Del from TOPARR
+	DelArr(tmp);
+
+	if (ifFirst){
+		DB->Next = tmp->Next;
+		free(tmp->Name);
+		free(tmp);
+	} else{
+		tmp->Next = node->Next;
+		free(node->Name);
+		free(node);
+	}
+
+	DB->Nums = DB->Nums-1;
 
 	return OK;
 }
@@ -308,18 +428,18 @@ void ListDataAsc(){
 // --CommandAction--
 // search
 Status SearchAction(int order){
-	if (DB->Next==NULL) return -1;
+	if (DB->Next==NULL) return ERR_EMPTYDB;
 	switch(order){
-		case -1: ListData();break;
-		case 0: ListDataDesc();break;
-		case 1: ListDataAsc();break;
+		case NONE: ListData();break;
+		case DESC: ListDataDesc();break;
+		case ASC: ListDataAsc();break;
 	}
-	return 1;
+	return OK;
 }
 
 // select
 Status SelectAction(int order,char** goods,int index){
-	if (DB->Next==NULL) return -1;
+	if (DB->Next==NULL) return ERR_EMPTYDB;
 	if (order==1){
 		for (int i=0;i<TOPARR->Length;i++){
 			for (int j=0;j<index;j++){
@@ -341,7 +461,7 @@ Status SelectAction(int order,char** goods,int index){
 			}
 		}
 	}
-	return 1;
+	return OK;
 }
 
 // add
@@ -352,9 +472,9 @@ Status AddAction(int order,char** goods,int index,int* sum){
 		tmp.Name = goods[i];
 		tmp.Sum = sum[i];
 		status = AddData(&tmp);	
-		if (status==Error) return status;
+		if (status!=OK) return status;
 	}
-	return 1;
+	return OK;
 }
 
 // new
@@ -365,9 +485,9 @@ Status NewAction(int order,char** goods,int index,int* sum){
 		tmp.Name = goods[i];
 		tmp.Sum = sum[i];
 		status = AddDataNotExist(&tmp);
-		if (status==Error) return status;
+		if (status!=OK) return status;
 	}
-	return 1;
+	return OK;
 }
 
 // del
@@ -378,7 +498,7 @@ Status DelAction(char** goods,int index,int* sum){
 		tmp.Name = goods[i];
 		tmp.Sum = sum[i];
 		status = DelData(&tmp);
-		if (status==Error) return status;
+		if (status!=OK) return status;
 	}
-	return 1;
+	return OK;
 }

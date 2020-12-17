@@ -2,3 +2,5 @@
 
 // func
 Status outputHello();
+Status outputMenu();
+Status outputGoodbye();

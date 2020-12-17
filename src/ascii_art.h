@@ -3,6 +3,6 @@ char *ascii_hello =
 "*                                                                           *\n"
 "*______________________Welcome to use this shop handler_____________________*\n"
 "*                                                                           *\n"
-"*_________You can type 'shop menu' to see the usage of this programme.______*\n"
+"*_____________You can type 'menu;' to see the usage of this programme.______*\n"
 "*                                                                           *\n"
 "*===========================================================================*\n";
