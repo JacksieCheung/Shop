@@ -11,7 +11,7 @@ void HandleStatus(Status stat){
             printf("Access denied, you can type 'sudo' to get right.");
             break;
         case ERR_NODENOTFOUNDDB:
-            printf("Can not find the node in DB.");
+               printf("Can not find the node in DB.");
             break;
         case ERR_NODEEXISTEDDB: 
             printf("The node is already existed.");
