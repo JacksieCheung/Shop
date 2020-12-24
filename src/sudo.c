@@ -22,14 +22,17 @@ Status SetSudo(){
     printf("System:input your password=>");
     fgets(buff,99,stdin);
     buff[strlen(buff)-1]='\0';
-    if (checkPassword(buff)>0) Sudo = 1;
-    return OK;
+    if (checkPassword(buff)>0) {
+		Sudo = 1;
+		return OK;
+	}
+    return Error;
 }
 
 Status IfExist(){
     if(Sudo) {
         Sudo = 0;
-        return 0;
+        return OK;
     }
-    return 10;
+    return EXIT_NOW;
 }
